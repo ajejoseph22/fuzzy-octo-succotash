@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "VPC",
+    "ParameterValue": "<VPC id here>"
+  },
+  {
+    "ParameterKey": "PublicSubnet",
+    "ParameterValue": "<Public subnet id here>"
+  },
+  {
+    "ParameterKey": "Image",
+    "ParameterValue": "<AMI id here>"
+  }
+]

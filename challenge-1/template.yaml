@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This creates an instance with a public IP within a specified VPC and attaches a security group
+Parameters:
+  VPC:
+    Description: Preferred VPC's Id
+    Type: AWS::EC2::VPC::Id
+  PublicSubnet:
+    Description: A public subnet's ID
+    Type: AWS::EC2::Subnet::Id
+  Image:
+    Description: The ID of the AMI
+    Type: AWS::EC2::Image::Id
+Resources:
+  MyInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: Image
+      InstanceType: t3.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          SubnetId:
+            Ref: PublicSubnet
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: MySecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+           #!/bin/bash
+           sudo yum update -y
+           sudo yum install -y httpd
+           sudo systemctl start httpd
+           sudo systemctl enable httpd
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group that allows http, https and ssh from the web
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          Description: Allows HTTP web traffic in
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+          Description: Allows HTTPS web traffic in
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 22
+          ToPort: 22
+          Description: Allows SSH traffic in
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
