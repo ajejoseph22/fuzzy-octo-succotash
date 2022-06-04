@@ -1,3 +1,3 @@
 #!/bin/bash
 
-aws cloudformation create-stack --stack-name ComputeStack --template-body file://$(pwd)/template.yaml --parameters file://$(pwd)/parameters.json
+aws cloudformation create-stack --stack-name "$1" --template-body file://"$2" --parameters file://"$3"
