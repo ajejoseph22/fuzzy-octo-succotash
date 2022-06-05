@@ -19,11 +19,17 @@ func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps) aw
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
 	// create VPC
-	awsec2.NewVpc(stack, jsii.String("StackVPC"), &awsec2.VpcProps{
+	vpc := awsec2.NewVpc(stack, jsii.String("StackVPC"), &awsec2.VpcProps{
 		Cidr:               jsii.String("10.0.0.0/16"),
 		VpcName:            jsii.String("Stack VPC"),
 		EnableDnsSupport:   jsii.Bool(true),
 		EnableDnsHostnames: jsii.Bool(true)})
+
+	awscdk.NewCfnOutput(stack, jsii.String("StackOutputs"), &awscdk.CfnOutputProps{
+		Value:       vpc.VpcId(),
+		Description: jsii.String("VPC ID"),
+		ExportName:  jsii.String("StackVpcId"),
+	})
 
 	return stack
 }
