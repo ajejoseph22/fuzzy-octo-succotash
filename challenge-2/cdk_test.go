@@ -18,8 +18,20 @@ func TestCdkStack(t *testing.T) {
 	// THEN
 	template := assertions.Template_FromStack(stack)
 
-	template.HasResourceProperties(jsii.String("AWS::SQS::Queue"), map[string]interface{}{
-		"VisibilityTimeout": 300,
+	template.HasResourceProperties(jsii.String("AWS::EC2::VPC"), map[string]interface{}{
+		"CidrBlock": jsii.String("10.0.0.0/16"),
 	})
-	template.ResourceCountIs(jsii.String("AWS::SNS::Topic"), jsii.Number(1))
+
+	// todo: test the attachments of each gateway (look for a way to get the IDs and assert)
+
+	template.ResourceCountIs(jsii.String("AWS::EC2::VPC"), jsii.Number(1))
+	// representing the 4 AZs in us-east-1
+	template.ResourceCountIs(jsii.String("AWS::EC2::Subnet"), jsii.Number(4))
+	template.ResourceCountIs(jsii.String("AWS::EC2::InternetGateway"), jsii.Number(1))
+	// representing one NAT GW in each public subnet/AZ
+	template.ResourceCountIs(jsii.String("AWS::EC2::NatGateway"), jsii.Number(2))
+	// Elastic IPs for the NAT GWs
+	template.ResourceCountIs(jsii.String("AWS::EC2::EIP"), jsii.Number(2))
+	template.ResourceCountIs(jsii.String("AWS::EC2::VPCGatewayAttachment"), jsii.Number(1))
+
 }
