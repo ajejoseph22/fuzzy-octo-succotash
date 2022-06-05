@@ -19,21 +19,11 @@ func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps) aw
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
 	// create VPC
-	vpc := awsec2.NewVpc(stack, jsii.String("StackVPC"), &awsec2.VpcProps{
+	awsec2.NewVpc(stack, jsii.String("StackVPC"), &awsec2.VpcProps{
 		Cidr:               jsii.String("10.0.0.0/16"),
 		VpcName:            jsii.String("Stack VPC"),
 		EnableDnsSupport:   jsii.Bool(true),
 		EnableDnsHostnames: jsii.Bool(true)})
-
-	// create IGW
-	internetGateway := awsec2.NewCfnInternetGateway(stack, jsii.String("StackIGW"), &awsec2.CfnInternetGatewayProps{})
-	internetGateway.Tags().SetTag(jsii.String("Environment"), jsii.String("Production"), jsii.Number(1), jsii.Bool(true))
-
-	// attach IGW to VPC
-	awsec2.NewCfnVPCGatewayAttachment(stack, jsii.String("StackVPCGatewayAttachment"),
-		&awsec2.CfnVPCGatewayAttachmentProps{
-			VpcId:             vpc.VpcId(),
-			InternetGatewayId: internetGateway.AttrInternetGatewayId()})
 
 	return stack
 }
