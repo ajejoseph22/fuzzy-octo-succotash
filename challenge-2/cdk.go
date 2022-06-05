@@ -2,9 +2,7 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awssns"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awssnssubscriptions"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awssqs"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsec2"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 )
@@ -20,12 +18,22 @@ func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps) aw
 	}
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
-	queue := awssqs.NewQueue(stack, jsii.String("CdkQueue"), &awssqs.QueueProps{
-		VisibilityTimeout: awscdk.Duration_Seconds(jsii.Number(300)),
-	})
+	// create VPC
+	vpc := awsec2.NewVpc(stack, jsii.String("StackVPC"), &awsec2.VpcProps{
+		Cidr:               jsii.String("10.0.0.0/16"),
+		VpcName:            jsii.String("Stack VPC"),
+		EnableDnsSupport:   jsii.Bool(true),
+		EnableDnsHostnames: jsii.Bool(true)})
 
-	topic := awssns.NewTopic(stack, jsii.String("CdkTopic"), &awssns.TopicProps{})
-	topic.AddSubscription(awssnssubscriptions.NewSqsSubscription(queue, &awssnssubscriptions.SqsSubscriptionProps{}))
+	// create IGW
+	internetGateway := awsec2.NewCfnInternetGateway(stack, jsii.String("StackIGW"), &awsec2.CfnInternetGatewayProps{})
+	internetGateway.Tags().SetTag(jsii.String("Environment"), jsii.String("Production"), jsii.Number(1), jsii.Bool(true))
+
+	// attach IGW to VPC
+	awsec2.NewCfnVPCGatewayAttachment(stack, jsii.String("StackVPCGatewayAttachment"),
+		&awsec2.CfnVPCGatewayAttachmentProps{
+			VpcId:             vpc.VpcId(),
+			InternetGatewayId: internetGateway.AttrInternetGatewayId()})
 
 	return stack
 }
