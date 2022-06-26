@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This Creates a Launch configuration
+Parameters:
+  ImageId:
+    Description: AMI Image ID
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Description: The type of instances launched
+    Type: String
+  EBSVolumeSize:
+    Description: The size of the EBS volume
+    Type: Number
+Resources:
+  AutoScalingLaunchConfig:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId:
+          Ref: ImageId
+        InstanceType:
+          Ref: InstanceType
+        BlockDeviceMappings:
+          - Ebs:
+              VolumeSize:
+                Ref: EBSVolumeSize
