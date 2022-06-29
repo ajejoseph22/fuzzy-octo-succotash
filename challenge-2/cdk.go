@@ -12,11 +12,11 @@ type CdkStackProps struct {
 }
 
 func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps) awscdk.Stack {
-	var sprops awscdk.StackProps
+	var stackProps awscdk.StackProps
 	if props != nil {
-		sprops = props.StackProps
+		stackProps = props.StackProps
 	}
-	stack := awscdk.NewStack(scope, &id, &sprops)
+	stack := awscdk.NewStack(scope, &id, &stackProps)
 
 	// create VPC
 	vpc := awsec2.NewVpc(stack, jsii.String("StackVPC"), &awsec2.VpcProps{
