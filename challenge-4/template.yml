@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template deploys a VPC, with a 4 pairs of private and public subnets spread
+  across four Availability Zones. It deploys an Internet Gateway, and a default
+  route on each public subnet. It deploys 4 NAT Gateways (one in each AZ),
+  and default routes for them in the private subnets. This Creates an ASG with a Launch Template and maintains instances
+  across the private subnets.
+
+######### Parameters #########
+
+Parameters:
+  NWEnvironmentName:
+    Description: Environment name of the network stack
+    Type: String
+
+  ASGMaxSize:
+    Description: Maximum number of instances in ASG
+    Type: String
+
+  ASGMinSize:
+    Description: Minimum number of instances in ASG
+    Type: String
+
+  ImageId:
+    Description: AMI Image ID
+    Type: AWS::EC2::Image::Id
+
+  InstanceType:
+    Description: The type of instances launched
+    Type: String
+
+  EBSVolumeSize:
+    Description: The size of the EBS volume
+    Type: Number
+
+  BucketARN:
+    Description: S3 Bucket ARN
+    Type: String
+
+######### Resources #########
+
+Resources:
+
+  ######### Launch Template #########
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${AWS::StackName}-LaunchTemplate"
+      LaunchTemplateData:
+        NetworkInterfaces:
+          - AssociatePublicIpAddress: true
+            DeviceIndex: 0
+        ImageId:
+          Ref: ImageId
+        InstanceType:
+          Ref: InstanceType
+        IamInstanceProfile:
+          Name: !Sub "${AWS::StackName}-InstanceProfile"
+        BlockDeviceMappings:
+          - DeviceName: /dev/sdh
+            Ebs:
+              VolumeSize:
+                Ref: EBSVolumeSize
+        UserData: !Base64 |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install apache2 -y
+          systemctl start apache2.service
+          cd /var/www/html
+          echo "Udacity Demo Web Server Up and Running!" > index.html
+#       TODO: UNCOMMENT THIS
+#        SecurityGroupIds:
+#          - !Sub "${AWS::StackName}-SecurityGroup"
+    DependsOn:
+      - InstanceProfile
+
+
+  ######### Target Group #########
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 35
+      HealthCheckPath: /
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 30
+      VpcId: !ImportValue
+        'Fn::Sub': '${NWEnvironmentName}-VPCID'
+      TargetType: instance
+      Protocol: HTTP
+      Port: 80
+
+
+  ######### Application Load Balancer #########
+  ELB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Name: !Sub "${AWS::StackName}-ELB"
+      Subnets: !Split
+        - ","
+        - !ImportValue
+            'Fn::Sub': '${NWEnvironmentName}-PUB-SUBNETS'
+      SecurityGroups:
+        - !Ref LBSecurityGroup
+
+  ELBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ELB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  ELBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Priority: 1
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/.*"
+      ListenerArn: !Ref ELBListener
+
+  ######### LB Security Group #########
+  LBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and HTTP access
+      GroupName: !Sub "${AWS::StackName}-LB-SecurityGroup"
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+      VpcId: !ImportValue
+        'Fn::Sub': '${NWEnvironmentName}-VPCID'
+
+# TODO: UNCOMMENT THIS
+#  ######### Instance Security Group #########
+#  InstanceSecurityGroup:
+#    Type: AWS::EC2::SecurityGroup
+#    Properties:
+#      GroupDescription: Allow VPC access
+#      GroupName: !Sub "${AWS::StackName}-SecurityGroup"
+#      SecurityGroupEgress:
+#        - IpProtocol: -1
+#          CidrIp: 0.0.0.0/0
+#      SecurityGroupIngress:
+#        - IpProtocol: tcp
+#          CidrIp: !Ref VpcCidr
+#          FromPort: 80
+
+  ######### Auto Scaling Group #########
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      HealthCheckType: EC2
+      MinSize:
+        Ref: ASGMinSize
+      MaxSize:
+        Ref: ASGMaxSize
+      LaunchTemplate:
+        LaunchTemplateId:
+          Ref: LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      AvailabilityZones:
+        - us-east-1a
+        - us-east-1b
+        - us-east-1c
+        - us-east-1d
+      VPCZoneIdentifier: !Split
+        - ","
+        - !ImportValue
+            'Fn::Sub': '${NWEnvironmentName}-PRIV-SUBNETS'
+      DesiredCapacity:
+        Ref: ASGMinSize
+    DependsOn:
+      - LaunchTemplate
+
+  ######### Instance Role #########
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: "Instance Role for ${AWS::StackName}"
+      AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal:
+                Service:
+                  - "ec2.amazonaws.com"
+              Action:
+                - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "EC2InstanceRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:GetObject"
+                Resource:
+                  - !Sub "${BucketARN}/*"
+
+  ######### Instance Profile #########
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${AWS::StackName}-InstanceProfile"
+      Roles:
+        - !Ref InstanceRole

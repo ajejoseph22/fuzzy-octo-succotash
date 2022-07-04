@@ -10,5 +10,21 @@
   {
     "ParameterKey": "EBSVolumeSize",
     "ParameterValue": "10"
+  },
+  {
+    "ParameterKey": "ASGMaxSize",
+    "ParameterValue": "4"
+  },
+  {
+    "ParameterKey": "ASGMinSize",
+    "ParameterValue": "4"
+  },
+  {
+    "ParameterKey": "BucketARN",
+    "ParameterValue": "arn:aws:s3:::udagram-123212321232"
+  },
+  {
+    "ParameterKey":"NWEnvironmentName",
+    "ParameterValue": "PeeStackNW"
   }
 ]
