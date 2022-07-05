@@ -273,3 +273,8 @@ Resources:
             'Fn::Sub': '${NWEnvironmentName}-PUB-SN-1'
           GroupSet:
             - !Ref BastionSecurityGroup
+
+Outputs:
+  LBUrl:
+    Description: URL of the load balancer
+    Value: !Join ["", ["http://", !GetAtt ELB.DNSName]]
