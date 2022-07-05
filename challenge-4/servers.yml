@@ -8,6 +8,10 @@ Description: This template deploys a VPC, with a 4 pairs of private and public s
 ######### Parameters #########
 
 Parameters:
+  AZs:
+    Description: The of Availability Zones to use
+    Type: List<AWS::EC2::AvailabilityZone::Name>
+
   KeyName:
     Description: The name of the ssh key pair to use for the instances.
     Type: String
@@ -210,11 +214,7 @@ Resources:
         LaunchTemplateId:
           Ref: LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
-      AvailabilityZones:
-        - us-east-1a
-        - us-east-1b
-        - us-east-1c
-        - us-east-1d
+      AvailabilityZones: !Ref AZs
       VPCZoneIdentifier: !Split
         - ","
         - !ImportValue
