@@ -22,8 +22,6 @@ func TestCdkStack(t *testing.T) {
 		"CidrBlock": jsii.String("10.0.0.0/16"),
 	})
 
-	// todo: test the attachments of each gateway (look for a way to get the IDs and assert)
-
 	template.ResourceCountIs(jsii.String("AWS::EC2::VPC"), jsii.Number(1))
 	// representing the 4 AZs in us-east-1
 	template.ResourceCountIs(jsii.String("AWS::EC2::Subnet"), jsii.Number(4))
