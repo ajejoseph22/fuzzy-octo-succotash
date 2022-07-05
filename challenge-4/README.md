@@ -2,6 +2,7 @@
 This project deploys a highly available web app spanning four availability zones.
 
 ## Architecture
+![](./architecture.png)
 
 ## Solution
 The solution consists of two parts:
@@ -9,15 +10,18 @@ The solution consists of two parts:
 2. The application (server) stack
 
 ## Deployment Steps
+* Configure parameters in `network-parameters.json` and `server-parameters.json`
 * Deploy the network stack first.
 
 ```
-aws cloudformation create-stack --stack-name <network-stack-name> --template-body file://network.yml --parameters file://network-parameters.json --capabilities CAPABILITY_NAMED_IAM
+../cfn-helpers/deploy.sh <network-stack-name> network.yml network-parameters.json
 ```
 
 * Then deploy the application stack.
 
 ```
-aws cloudformation create-stack --stack-name <network-stack-name> --template-body file://servers.yml --parameters file://server-parameters.json --capabilities CAPABILITY_NAMED_IAM
+../cfn-helpers/deploy.sh <application-stack-name> servers.yml server-parameters.json
 ```
+
+Note: AWS CLI must be installed on the machine from where the stack is deployed
 
