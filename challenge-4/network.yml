@@ -381,6 +381,12 @@ Outputs:
     Export:
       Name: !Sub ${EnvironmentName}-VPCID
 
+  VPCCidr:
+    Description: A reference to CIDR of the created VPC
+    Value: !Ref VpcCIDR
+    Export:
+      Name: !Sub ${EnvironmentName}-VPCCidr
+
   VPCPublicRouteTable:
     Description: Public Routing
     Value: !Ref PublicSNRouteTable

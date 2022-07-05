@@ -26,5 +26,13 @@
   {
     "ParameterKey":"NWEnvironmentName",
     "ParameterValue": "PeeStackNW"
+  },
+  {
+    "ParameterKey":"MyIP",
+    "ParameterValue": "197.210.52.225/32"
+  },
+  {
+    "ParameterKey":"KeyName",
+    "ParameterValue": "personal"
   }
 ]

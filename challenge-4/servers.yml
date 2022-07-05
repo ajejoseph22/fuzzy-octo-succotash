@@ -8,6 +8,14 @@ Description: This template deploys a VPC, with a 4 pairs of private and public s
 ######### Parameters #########
 
 Parameters:
+  KeyName:
+    Description: The name of the ssh key pair to use for the instances.
+    Type: String
+
+  MyIP:
+    Description: User IP Address
+    Type: String
+
   NWEnvironmentName:
     Description: Environment name of the network stack
     Type: String
@@ -47,8 +55,10 @@ Resources:
       LaunchTemplateName: !Sub "${AWS::StackName}-LaunchTemplate"
       LaunchTemplateData:
         NetworkInterfaces:
-          - AssociatePublicIpAddress: true
+          - AssociatePublicIpAddress: false
             DeviceIndex: 0
+            Groups:
+              - !Ref InstanceSecurityGroup
         ImageId:
           Ref: ImageId
         InstanceType:
@@ -64,12 +74,13 @@ Resources:
           #!/bin/bash
           apt-get update -y
           apt-get install apache2 -y
+          
+          # Install AWS CLI         
+          sudo apt install awscli -y
+          
           systemctl start apache2.service
-          cd /var/www/html
-          echo "Udacity Demo Web Server Up and Running!" > index.html
-#       TODO: UNCOMMENT THIS
-#        SecurityGroupIds:
-#          - !Sub "${AWS::StackName}-SecurityGroup"
+          cd /var/www/html && rm ./index.html
+          aws s3 cp s3://udagram-123212321232/index.html ./index.html
     DependsOn:
       - InstanceProfile
 
@@ -80,7 +91,7 @@ Resources:
     Properties:
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 35
-      HealthCheckPath: /
+      HealthCheckPath: /index.html
       HealthCheckPort: 80
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 30
@@ -144,20 +155,45 @@ Resources:
       VpcId: !ImportValue
         'Fn::Sub': '${NWEnvironmentName}-VPCID'
 
-# TODO: UNCOMMENT THIS
-#  ######### Instance Security Group #########
-#  InstanceSecurityGroup:
-#    Type: AWS::EC2::SecurityGroup
-#    Properties:
-#      GroupDescription: Allow VPC access
-#      GroupName: !Sub "${AWS::StackName}-SecurityGroup"
-#      SecurityGroupEgress:
-#        - IpProtocol: -1
-#          CidrIp: 0.0.0.0/0
-#      SecurityGroupIngress:
-#        - IpProtocol: tcp
-#          CidrIp: !Ref VpcCidr
-#          FromPort: 80
+  ######### Instance Security Group #########
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !ImportValue
+        'Fn::Sub': '${NWEnvironmentName}-VPCID'
+      GroupDescription: Allow VPC access
+      GroupName: !Sub "${AWS::StackName}-SecurityGroup"
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: !ImportValue
+            'Fn::Sub': '${NWEnvironmentName}-VPCCidr'
+          FromPort: 80
+          ToPort: 80
+        - IpProtocol: tcp
+          CidrIp: !ImportValue
+            'Fn::Sub': '${NWEnvironmentName}-VPCCidr'
+          FromPort: 22
+          ToPort: 22
+
+  ######### Bastion Security Group #########
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !ImportValue
+        'Fn::Sub': '${NWEnvironmentName}-VPCID'
+      GroupDescription: Allow external SSH access
+      GroupName: !Sub "${AWS::StackName}-BastionSecurityGroup"
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: !Ref MyIP
+          FromPort: 22
+          ToPort: 22
 
   ######### Auto Scaling Group #########
   AutoScalingGroup:
@@ -220,3 +256,20 @@ Resources:
       InstanceProfileName: !Sub "${AWS::StackName}-InstanceProfile"
       Roles:
         - !Ref InstanceRole
+
+  ######### Bastion Host #########
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: ImageId
+      InstanceType:
+        Ref: InstanceType
+      KeyName: !Ref KeyName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !ImportValue
+            'Fn::Sub': '${NWEnvironmentName}-PUB-SN-1'
+          GroupSet:
+            - !Ref BastionSecurityGroup
