@@ -52,7 +52,7 @@ resource "aws_subnet" "public" {
   availability_zone = data.aws_availability_zones.azs.names[0]
   tags = {
     Terraform = "true",
-    Name      = "private subnet"
+    Name      = "public subnet"
   }
 }
 
