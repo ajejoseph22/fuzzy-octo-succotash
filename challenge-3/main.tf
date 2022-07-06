@@ -63,6 +63,11 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
   }
+
+  tags = {
+    Terraform = "true",
+    Name      = "public route table"
+  }
 }
 
 resource "aws_route_table" "private" {
@@ -71,6 +76,11 @@ resource "aws_route_table" "private" {
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_nat_gateway.main.id
+  }
+
+  tags = {
+    Terraform = "true",
+    Name      = "private route table"
   }
 }
 
